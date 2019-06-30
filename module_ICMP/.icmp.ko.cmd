@@ -1,0 +1,1 @@
+cmd_/home/as/eltex/module_ICMP/icmp.ko := ld -r -m elf_i386 -T ./scripts/module-common.lds --build-id  -o /home/as/eltex/module_ICMP/icmp.ko /home/as/eltex/module_ICMP/icmp.o /home/as/eltex/module_ICMP/icmp.mod.o

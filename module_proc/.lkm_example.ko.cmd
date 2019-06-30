@@ -1,0 +1,1 @@
+cmd_/home/as/eltex/module_proc/lkm_example.ko := ld -r -m elf_i386 -T ./scripts/module-common.lds --build-id  -o /home/as/eltex/module_proc/lkm_example.ko /home/as/eltex/module_proc/lkm_example.o /home/as/eltex/module_proc/lkm_example.mod.o
