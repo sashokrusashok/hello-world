@@ -118,6 +118,7 @@ int exist_filter(struct netfilter *filter)
 
 /*Функция, которая добавляет правило в структуру, хранящей все фильтры, если данное правило уже имеется, 
 то оно не добавляется и выводится соответствующая информация в логи*/
+
 int enable_rule_of_filter(struct netfilter *filter)
 {
   int i,error;
@@ -167,34 +168,34 @@ int disable_rule_of_filter(struct netfilter *filter)
 
 long filter_ioctl(  struct file *file,unsigned int ioctl_num,unsigned long ioctl_param)
 {
-  filter = kmalloc(sizeof(struct netfilter), GFP_KERNEL);
-  if( ( _IOC_TYPE( ioctl_num ) != IOC_MAGIC ) )
-  { 
-    kfree(filter);
-    return -ENOTTY;
-  }
-    switch( ioctl_num ) 
+  	filter = kmalloc(sizeof(struct netfilter), GFP_KERNEL);
+  	if( ( _IOC_TYPE( ioctl_num ) != IOC_MAGIC ) )
+  	{ 
+    	kfree(filter);
+    	return 0;
+  	}
+  	switch( ioctl_num ) 
     {
         /*Параметр при котором происходит копирование фильтра из userspace в kernelspace через ioctl/dev */
 
         case IOCTL_SET_FILTER:
-          if (copy_from_user(filter, (void*)ioctl_param, sizeof(struct netfilter)))
-            printk(KERN_INFO "ERROR1\n"); 
-          else
-            if(filter->mode == FILTER_ENABLE)
-              enable_rule_of_filter(filter);
+          	if (copy_from_user(filter, (void*)ioctl_param, sizeof(struct netfilter)))
+            	printk(KERN_INFO "ERROR1\n"); 
+          	else
+            	if(filter->mode == FILTER_ENABLE)
+              	enable_rule_of_filter(filter);
             else 
-              if(filter->mode == FILTER_DISABLE)
-                disable_rule_of_filter(filter);
-          break;
+              	if(filter->mode == FILTER_DISABLE)
+                	disable_rule_of_filter(filter);
+          	break;
 
         /*Параметр при котором происходит копирование фильтра из kernelspace в userspace через ioctl/procfs*/
 
         case IOCTL_GET_STAT_FILTER:
-          if( copy_to_user( (void*)ioctl_param, all_filters, sizeof(struct all_netfilters)*NUMBER_FILTER_RULE )) 
-            printk(KERN_INFO "ERROR2\n"); 
-          break;
-   }
+          	if( copy_to_user( (void*)ioctl_param, all_filters, sizeof(struct all_netfilters)*NUMBER_FILTER_RULE )) 
+            	printk(KERN_INFO "ERROR2\n"); 
+          	break;
+   	}
     kfree(filter);
     return 0;
 }

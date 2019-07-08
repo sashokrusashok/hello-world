@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include "../common.h"
 
-#define ERR(...) fprintf( stderr, "\7" __VA_ARGS__ ), exit( EXIT_FAILURE )
 #define DEV_PATH "/dev/ioctl_dev"
 #define PROC_PATH "/proc/ioctl_proc"
 

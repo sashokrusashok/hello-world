@@ -30,7 +30,8 @@ int search_transport(int argc, char **argv,struct netfilter *filter)
    return 0;
 }
 
-/*поиск ip адреса*/
+/*поиск ip адреса, если ip не был задан, то счетчик availability_of_parameters уменьшается на единицу,
+если счетчик равен нулю, значит, не был задан ни ip ни port*/
 
 int search_ip(int argc, char **argv,struct netfilter *filter)
 {
@@ -52,7 +53,8 @@ int search_ip(int argc, char **argv,struct netfilter *filter)
    return 1;
 }
 
-/*поиск порта*/
+/*поиск порта, если port не был задан, то счетчик availability_of_parameters уменьшается на единицу,
+если счетчик равен нулю, значит, не был задан ни ip ни port*/
 
 int search_port(int argc, char **argv,struct netfilter *filter)
 {
@@ -111,7 +113,7 @@ int search_mode(int argc, char **argv,struct netfilter *filter)
 void send_rule_of_filter(struct netfilter *filter, int fd_dev)
 {
    if(ioctl( fd_dev, IOCTL_SET_FILTER, filter))
-      ERR( "Error IOCTL_SET_FILTER %m\n" );
+      printf("Error IOCTL_SET_FILTER \n");
 }
 
 /*функция выдача статистики*/
@@ -124,7 +126,7 @@ int show_stat(char **argv,int fd_proc)
       int i,count=0;
       char *transport_protocol;
       if (ioctl( fd_proc, IOCTL_GET_STAT_FILTER, stat_filters ))
-         ERR( "Error IOCTL_GET_STAT_FILTER %m\n" );
+         printf( "Error IOCTL_GET_STAT_FILTER\n" );
       for(i=0; i<NUMBER_FILTER_RULE; i++)
          if(stat_filters[i].free_cell_of_filter == 1)
          { 
@@ -154,15 +156,23 @@ int main(int argc, char *argv[])
    int fd_proc,fd_dev,error;
    struct netfilter filter;
 
+   /*Если значение availability_of_parameters == 0, значит не был задан ни ip ни port*/
+
    availability_of_parameters = 2;
    memset (&filter, 0, sizeof(struct netfilter));
    
    /*открываем два файла, через один отправляем правило спомощью ioctl/dev, через другой получаем статистику с помощью ioctl/procfs*/
 
    if( ( fd_dev = open( DEV_PATH, O_RDWR ) ) < 0 ) 
-      ERR( "Open device error: %m\n" );
+   {
+      printf("Open device error\n");
+      return 0;
+   }
    if( ( fd_proc = open( PROC_PATH, O_RDWR ) ) < 0 ) 
-      ERR( "Open proc error: %m\n" );
+   {
+      printf( "Open proc error\n" );
+      return 0;
+   }
 
    /*если ввели команду show, то выводится статистика по всем фильтрам*/
 
@@ -186,11 +196,9 @@ int main(int argc, char *argv[])
                if(error != 0)
                {
                   if( availability_of_parameters == 0 )
-                        printf("No ip address and no port in rule of filter\n");
+                     printf("No ip address and no port in rule of filter\n");
                   else
-                  {
                      send_rule_of_filter( &filter,fd_dev );
-                  }
                }
             }
          }

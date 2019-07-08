@@ -1,5 +1,8 @@
+CC = gcc
+CFLAGS = -pedantic -Wall -g
+
 all:	
-		gcc client_tufilter.c -Wall -o tufilter
+		$(CC) client_tufilter.c $(CFLAGS) -o tufilter
 
 test:
 		sudo ./tufilter --transport tcp --ip 172.25.23.4 --port 4357 --filter enable
@@ -15,9 +18,3 @@ show:
 
 clean:
 		sudo rm tufilter
-
-
-
-
-
-
