@@ -26,7 +26,7 @@ int search_transport(int argc, char **argv,struct netfilter *filter)
             }
       }
    }
-   printf("Incorrect input. Enter parametr '--transport'!!!\n");
+   printf("Incorrect input. Enter parameter '--transport'!!!\n");
    return 0;
 }
 
@@ -99,12 +99,33 @@ int search_mode(int argc, char **argv,struct netfilter *filter)
             }
             else 
             {
-               printf("Enter parametr '--filter' with value enable/disable!!!\n");
+               printf("Enter parameter '--filter' with value enable/disable!!!\n");
                return 0;
             }
       }
    }
-   printf("Enter parametr '--filter' with value enable/disable!!!\n");
+   printf("Enter parameter '--filter' with value enable/disable!!!\n");
+   return 0;
+}
+
+int search_input_or_output_packet(int argc, char **argv,struct netfilter *filter)
+{
+   int i;
+   for(i=0; i<argc; i++)
+   {
+      if(strcmp("--i",argv[i])==0)
+      {
+         filter->in_or_out_packet = INPUT_PACKET;
+         return 1;
+      }
+      else 
+         if(strcmp("--o",argv[i])==0)
+         {
+            filter->in_or_out_packet = OUTPUT_PACKET;
+            return 1;
+         }
+   }
+   printf("Select parameter input or output packets(--i/--o)\n");
    return 0;
 }
 
@@ -124,7 +145,7 @@ int show_stat(char **argv,int fd_proc)
    if(strcmp("--show",argv[1])== 0)
    {
       int i,count=0;
-      char *transport_protocol;
+      char *transport_protocol,*in_or_out;
       if (ioctl( fd_proc, IOCTL_GET_STAT_FILTER, stat_filters ))
          printf( "Error IOCTL_GET_STAT_FILTER\n" );
       for(i=0; i<NUMBER_FILTER_RULE; i++)
@@ -132,16 +153,24 @@ int show_stat(char **argv,int fd_proc)
          { 
             if( stat_filters[i].transport == IPPROTO_UDP) 
                transport_protocol = "UDP";
-            if( stat_filters[i].transport == IPPROTO_TCP) 
-               transport_protocol = "TCP";
+            else
+               if( stat_filters[i].transport == IPPROTO_TCP) 
+                  transport_protocol = "TCP";
+            if(stat_filters[i].in_or_out_packet == INPUT_PACKET)
+               in_or_out = "Input";
+            else
+               if(stat_filters[i].in_or_out_packet == OUTPUT_PACKET)
+                  in_or_out = "Output";
             if(stat_filters[i].port == 0)
-               printf("%d. | Transport: %s | IP = %s | Number of packets dropped: %d\n", i+1-count, transport_protocol, (char *)inet_ntoa(stat_filters[i].ip), stat_filters[i].number_drop_packet);
+               printf("%d. | Transport: %s | IP = %s | Type of traffic: %s | Number of packets dropped: %d\n", 
+               i+1-count, transport_protocol, (char *)inet_ntoa(stat_filters[i].ip), in_or_out, stat_filters[i].number_drop_packet);
             else
                if(stat_filters[i].ip.s_addr == 0)
-                  printf("%d. | Transport: %s | Port: %d | Number of packets dropped: %d\n", i+1-count, transport_protocol, stat_filters[i].port, stat_filters[i].number_drop_packet); 
+                  printf("%d. | Transport: %s | Port: %d | Type of traffic: %s  | Number of packets dropped:%d\n", 
+                  i+1-count, transport_protocol, stat_filters[i].port, in_or_out, stat_filters[i].number_drop_packet); 
                else           
-                  printf("%d. | Transport: %s | Port: %d IP = %s | Number of packets dropped: %d\n",
-                  i+1-count, transport_protocol, stat_filters[i].port, (char *)inet_ntoa(stat_filters[i].ip), stat_filters[i].number_drop_packet);
+                  printf("%d. | Transport: %s | Port: %d IP = %s | Type of traffic: %s | Number of packets dropped: %d\n",
+                  i+1-count, transport_protocol, stat_filters[i].port, (char *)inet_ntoa(stat_filters[i].ip),in_or_out ,stat_filters[i].number_drop_packet);
          }
          else
             count++;
@@ -150,11 +179,36 @@ int show_stat(char **argv,int fd_proc)
    else
       return 0;
 }
+char *read_file_ip_interface(int fd)
+{
+   int size_of_file,i=0;
+   char *file,*ip_interface;;
+   size_of_file = lseek( fd , 0 , SEEK_END );
+   printf("\nsize = %d\n",size_of_file);
+   file = malloc(size_of_file*sizeof(char));
+   lseek(fd, 0, SEEK_SET);
+   read(fd,file,size_of_file);
+   if( strncmp(file, "ip_interface:",13) == 0) 
+   {
+      while(1)
+      {
+         if(file[13+i] != ' ')
+         {
+            ip_interface = &file[13+i];
+            break;
+         }
+         i++;
+      }    
+   }
+   free(file);
+   return ip_interface;
+}
 
 int main(int argc, char *argv[]) 
 {
-   int fd_proc,fd_dev,error;
+   int fd_proc,fd_dev,fd_ip_eth,error;
    struct netfilter filter;
+   char *ip_interface;
 
    /*Если значение availability_of_parameters == 0, значит не был задан ни ip ни port*/
 
@@ -173,6 +227,15 @@ int main(int argc, char *argv[])
       printf( "Open proc error\n" );
       return 0;
    }
+   if( ( fd_ip_eth = open( "ip_interface", O_RDWR ) ) < 0 ) 
+   {
+      printf("Open device error\n");
+      return 0;
+   }
+   ip_interface = read_file_ip_interface(fd_ip_eth);
+   
+
+
 
    /*если ввели команду show, то выводится статистика по всем фильтрам*/
 
@@ -195,15 +258,23 @@ int main(int argc, char *argv[])
                error = search_mode( argc, argv, &filter );
                if(error != 0)
                {
-                  if( availability_of_parameters == 0 )
-                     printf("No ip address and no port in rule of filter\n");
-                  else
-                     send_rule_of_filter( &filter,fd_dev );
+                  error = search_input_or_output_packet( argc, argv, &filter );
+                  if (error != 0)
+                  {
+                     if(inet_aton(ip_interface, &filter.address_of_interface) == 0) 
+                        printf("ip of interface incorrect!!!\n");
+                     else
+                        if( availability_of_parameters == 0 )
+                           printf("No ip address and no port in rule of filter\n");
+                        else
+                           send_rule_of_filter( &filter,fd_dev );
+                  }
                }
             }
          }
       }
    }
+   close( fd_ip_eth );
    close( fd_dev );
    close( fd_proc );
    return EXIT_SUCCESS;

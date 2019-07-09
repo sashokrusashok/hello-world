@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <sys/types.h>
 #include "../common.h"
 
 #define DEV_PATH "/dev/ioctl_dev"
@@ -19,5 +20,6 @@ int search_transport(int argc, char **argv,struct netfilter *filter);
 int search_ip(int argc, char **argv,struct netfilter *filter);
 int search_port(int argc, char **argv,struct netfilter *filter);
 int search_mode(int argc, char **argv,struct netfilter *filter);
+int search_input_or_output_packet(int argc, char **argv,struct netfilter *filter);
 void send_rule_of_filter(struct netfilter *filter, int fd_dev);
 int show_stat(char **argv,int fd_proc);
