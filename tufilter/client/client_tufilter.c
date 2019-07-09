@@ -184,7 +184,6 @@ char *read_file_ip_interface(int fd)
    int size_of_file,i=0;
    char *file,*ip_interface;;
    size_of_file = lseek( fd , 0 , SEEK_END );
-   printf("\nsize = %d\n",size_of_file);
    file = malloc(size_of_file*sizeof(char));
    lseek(fd, 0, SEEK_SET);
    read(fd,file,size_of_file);
