@@ -78,24 +78,8 @@ uint32_t netfilter_hook(void *priv,struct sk_buff *skb,const struct nf_hook_stat
           //а ip источника должно совпадать с ip сетевого интерфейса с которого отправляется пакет
 
           if(all_filters[i].in_or_out_packet == OUTPUT_PACKET)
-          {
-            /*Если запрещаю отправку самому себе на интерфейс, то есть запрещаю пакеты с ip dest == ip своего интерфейса
-              то если я отправляю со своего интерфейса, входящие пакеты имеют ip dest моего интерфейса и они блокируются, 
-              условие ниже это исключает*/
-
-            if(all_filters[i].address_of_interface.s_addr == ip->daddr)
-            {
-              if(ip->saddr == ip->daddr)
-              {
-                printk(KERN_INFO "send packet loopback\n");
-                all_filters[i].number_drop_packet++;
-                return NF_DROP;
-              }
-              else
-                break;
-            }
-
-              //если в фильтре отсутствует порт, то фильтруем только по ip
+          { 
+            //если в фильтре отсутствует порт, то фильтруем только по ip
 
               if(all_filters[i].port == 0)
               {
@@ -180,7 +164,7 @@ int enable_rule_of_filter(struct netfilter *filter)
       all_filters[i].port = filter->port;
       all_filters[i].mode = filter->mode;
       all_filters[i].ip.s_addr = filter->ip.s_addr;
-      all_filters[i].address_of_interface.s_addr = filter->address_of_interface.s_addr;
+      //all_filters[i].address_of_interface.s_addr = filter->address_of_interface.s_addr;
       all_filters[i].in_or_out_packet = filter->in_or_out_packet;
       if(filter->in_or_out_packet == INPUT_PACKET)
         printk("enable filter - transport = %d port = %d ip = %d type of traffic: Input\n", filter->transport, filter->port,  filter->ip.s_addr);

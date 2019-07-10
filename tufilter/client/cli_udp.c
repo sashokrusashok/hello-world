@@ -11,7 +11,7 @@ int main()
 {
     int sock,len1,bytes_read;
     struct sockaddr_in addr;
-    char *ip_serv = "10.0.2.15";
+    char *ip_serv = "192.168.23.4";
 
     sock = socket(AF_INET, SOCK_DGRAM, 0);
     if(sock < 0)
@@ -21,7 +21,7 @@ int main()
     }
 
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(4357);
+    addr.sin_port = htons(7777);
     if (inet_aton(ip_serv, (struct in_addr *)&addr.sin_addr) == 0) 
     {
         printf("Address of server is invalid!\n");

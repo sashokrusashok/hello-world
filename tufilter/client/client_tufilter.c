@@ -179,35 +179,11 @@ int show_stat(char **argv,int fd_proc)
    else
       return 0;
 }
-char *read_file_ip_interface(int fd)
-{
-   int size_of_file,i=0;
-   char *file,*ip_interface;;
-   size_of_file = lseek( fd , 0 , SEEK_END );
-   file = malloc(size_of_file*sizeof(char));
-   lseek(fd, 0, SEEK_SET);
-   read(fd,file,size_of_file);
-   if( strncmp(file, "ip_interface:",13) == 0) 
-   {
-      while(1)
-      {
-         if(file[13+i] != ' ')
-         {
-            ip_interface = &file[13+i];
-            break;
-         }
-         i++;
-      }    
-   }
-   free(file);
-   return ip_interface;
-}
 
 int main(int argc, char *argv[]) 
 {
-   int fd_proc,fd_dev,fd_ip_eth,error;
+   int fd_proc,fd_dev,error;
    struct netfilter filter;
-   char *ip_interface;
 
    /*Если значение availability_of_parameters == 0, значит не был задан ни ip ни port*/
 
@@ -226,16 +202,6 @@ int main(int argc, char *argv[])
       printf( "Open proc error\n" );
       return 0;
    }
-   if( ( fd_ip_eth = open( "ip_interface", O_RDWR ) ) < 0 ) 
-   {
-      printf("Open device error\n");
-      return 0;
-   }
-   ip_interface = read_file_ip_interface(fd_ip_eth);
-   
-
-
-
    /*если ввели команду show, то выводится статистика по всем фильтрам*/
 
    if( argc == 2 )
@@ -260,20 +226,16 @@ int main(int argc, char *argv[])
                   error = search_input_or_output_packet( argc, argv, &filter );
                   if (error != 0)
                   {
-                     if(inet_aton(ip_interface, &filter.address_of_interface) == 0) 
-                        printf("ip of interface incorrect!!!\n");
+                     if( availability_of_parameters == 0 )
+                        printf("No ip address and no port in rule of filter\n");
                      else
-                        if( availability_of_parameters == 0 )
-                           printf("No ip address and no port in rule of filter\n");
-                        else
-                           send_rule_of_filter( &filter,fd_dev );
+                        send_rule_of_filter( &filter,fd_dev );
                   }
                }
             }
          }
       }
    }
-   close( fd_ip_eth );
    close( fd_dev );
    close( fd_proc );
    return EXIT_SUCCESS;

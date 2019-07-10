@@ -1,1 +1,0 @@
-cmd_/home/we/projects/gitHub/hello-world/tufilter/tufilter/tufilter.ko := ld -r -m elf_i386 -T ./scripts/module-common.lds --build-id  -o /home/we/projects/gitHub/hello-world/tufilter/tufilter/tufilter.ko /home/we/projects/gitHub/hello-world/tufilter/tufilter/tufilter.o /home/we/projects/gitHub/hello-world/tufilter/tufilter/tufilter.mod.o

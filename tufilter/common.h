@@ -3,7 +3,6 @@
 	int port;
 	int mode;
 	int in_or_out_packet;
-	struct in_addr address_of_interface;
 	struct in_addr ip;
 } ;
  struct all_netfilters{
@@ -12,7 +11,6 @@
 	int port;
 	int mode;
 	int in_or_out_packet;
-	struct in_addr address_of_interface;
 	struct in_addr ip;
 	int number_drop_packet;
 } ;
