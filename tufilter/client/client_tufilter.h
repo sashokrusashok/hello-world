@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <getopt.h>
 #include "../common.h"
 
 #define DEV_PATH "/dev/ioctl_dev"
@@ -16,10 +17,9 @@
 
 static int availability_of_parameters;
 
-int search_transport(int argc, char **argv,struct netfilter *filter);
-int search_ip(int argc, char **argv,struct netfilter *filter);
-int search_port(int argc, char **argv,struct netfilter *filter);
-int search_mode(int argc, char **argv,struct netfilter *filter);
-int search_input_or_output_packet(int argc, char **argv,struct netfilter *filter);
+int transport_protocol(char *value_of_parametr,struct netfilter *filter);
+int ip_protocol(char *value_of_ip_parametr,struct netfilter *filter);
+int port(char *value_of_port,struct netfilter *filter);
+int mode(char *value_of_mode, struct netfilter *filter);
 void send_rule_of_filter(struct netfilter *filter, int fd_dev);
-int show_stat(char **argv,int fd_proc);
+void show_stat(char **argv,int fd_proc);
