@@ -15,12 +15,12 @@ uint32_t netfilter_hook(void *priv,struct sk_buff *skb,const struct nf_hook_stat
   struct udphdr *udp_or_tcp;
   int i;
 
-  /*функции, которые возвращаю адреса на соответствующие заголовки в пакете*/
+  /*Функции, которые возвращаю адреса на соответствующие заголовки в пакете*/
 
   ip = (struct iphdr *) skb_network_header(skb);
   udp_or_tcp = (struct udphdr *) skb_transport_header(skb);
   
-  /*фильтрация только udp и tcp пакетов*/
+  /*Фильтрация только udp и tcp пакетов*/
 
   if(ip->protocol == IPPROTO_UDP || ip->protocol == IPPROTO_TCP)
   {
@@ -33,11 +33,11 @@ uint32_t netfilter_hook(void *priv,struct sk_buff *skb,const struct nf_hook_stat
 
         if(all_filters[i].in_or_out_packet == INPUT_PACKET)
         {
-            //если в фильтре отсутствует порт, то фильтруем только по ip
+            /*Если в фильтре отсутствует порт, то фильтруем только по ip*/
 
             if(all_filters[i].port == 0)
             {
-              //если ip адрес источника совпадает 
+              /*Если ip адрес источника совпадает*/ 
 
               if(all_filters[i].ip.s_addr == ip->saddr)  
               {
@@ -48,7 +48,7 @@ uint32_t netfilter_hook(void *priv,struct sk_buff *skb,const struct nf_hook_stat
             }
             else
             {
-              //если в фильтре отсутствует ip, то фильтруем только по порту
+              /*Если в фильтре отсутствует ip, то фильтруем только по порту*/
 
               if(all_filters[i].ip.s_addr == 0)
               {
@@ -61,7 +61,7 @@ uint32_t netfilter_hook(void *priv,struct sk_buff *skb,const struct nf_hook_stat
               }
               else
               {
-                //если в фильтре присутствует ip и port, то фильтруем по их связке
+                /*Если в фильтре присутствует ip и port, то фильтруем по их связке*/
 
                 if(all_filters[i].port == ntohs(udp_or_tcp->source) && all_filters[i].ip.s_addr == ip->saddr)
                 {
@@ -74,12 +74,12 @@ uint32_t netfilter_hook(void *priv,struct sk_buff *skb,const struct nf_hook_stat
         }
         else
         {
-          //Если фильтруется выходной трафик, то ip/port назначения пакета должен совпадать с ip/port фильтра, 
-          //а ip источника должно совпадать с ip сетевого интерфейса с которого отправляется пакет
+          /*Если фильтруется выходной трафик, то ip/port назначения пакета должен совпадать с ip/port фильтра, 
+          а ip источника должно совпадать с ip сетевого интерфейса с которого отправляется пакет*/
 
           if(all_filters[i].in_or_out_packet == OUTPUT_PACKET)
           { 
-            //если в фильтре отсутствует порт, то фильтруем только по ip
+            /*Если в фильтре отсутствует порт, то фильтруем только по ip*/
 
               if(all_filters[i].port == 0)
               {
@@ -94,7 +94,7 @@ uint32_t netfilter_hook(void *priv,struct sk_buff *skb,const struct nf_hook_stat
               {
                 if(all_filters[i].ip.s_addr == 0)
                 { 
-                  //если в фильтре отсутствует ip, то фильтруем только по порту
+                  /*Если в фильтре отсутствует ip, то фильтруем только по порту*/
 
                     if(all_filters[i].port == ntohs(udp_or_tcp->dest))
                     {
@@ -105,7 +105,7 @@ uint32_t netfilter_hook(void *priv,struct sk_buff *skb,const struct nf_hook_stat
                 }
                 else
                 {
-                  //если в фильтре присутствует ip и port, то фильтруем по их связке
+                  /*Если в фильтре присутствует ip и port, то фильтруем по их связке*/
 
                   if(all_filters[i].port == ntohs(udp_or_tcp->dest) && all_filters[i].ip.s_addr == ip->daddr)
                   {
@@ -164,7 +164,6 @@ int enable_rule_of_filter(struct netfilter *filter)
       all_filters[i].port = filter->port;
       all_filters[i].mode = filter->mode;
       all_filters[i].ip.s_addr = filter->ip.s_addr;
-      //all_filters[i].address_of_interface.s_addr = filter->address_of_interface.s_addr;
       all_filters[i].in_or_out_packet = filter->in_or_out_packet;
       if(filter->in_or_out_packet == INPUT_PACKET)
         printk("enable filter - transport = %d port = %d ip = %d type of traffic: Input\n", filter->transport, filter->port,  filter->ip.s_addr);
@@ -318,7 +317,6 @@ static void __exit tufilter_exit_module(void)
   remove_proc_entry(PROC_FILE_NAME, NULL);
   printk(KERN_INFO "Goodbye, World!\n");
 }
-
 
 module_init(tufilter_init_module);
 module_exit(tufilter_exit_module);

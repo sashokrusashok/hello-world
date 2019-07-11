@@ -21,7 +21,7 @@ int main()
     }
 
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(7777);
+    addr.sin_port = htons(777);
     if (inet_aton(ip_serv, (struct in_addr *)&addr.sin_addr) == 0) 
     {
         printf("Address of server is invalid!\n");

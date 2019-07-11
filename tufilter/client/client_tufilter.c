@@ -1,5 +1,134 @@
 #include "client_tufilter.h"
-/*Поиск транспортного поротокола*/
+
+int parser(int argc, char **argv, struct netfilter *filter,int fd_proc)
+{
+   int error,parametr,option_index,flag_transport,flag_in_out_packet,flag_mode,availability_of_parameters;
+   const char *short_options = "hio";
+   const struct option long_options[] = {
+        {"help",no_argument,NULL,'h'},
+        {"transport",required_argument,NULL,0},
+        {"ip",required_argument,NULL,1},
+        {"port",required_argument,NULL,2},
+        {"filter",required_argument,NULL,3},
+        {"show",no_argument,NULL,4},
+   };
+
+   /*переменная, учитывающая ввод ip или port, если значение не изменилось, то не был введен ни один из параметров*/
+   availability_of_parameters = 0;
+   /*переменная, учитывающая ввод транспортного протокола*/
+   flag_transport = 0;
+   /*переменная, учитывающая ввод типа трафика*/
+   flag_in_out_packet = 0;
+   /*переменная, учитывающая ввод режима работы фильтра*/
+   flag_mode = 0;
+
+   while ((parametr = getopt_long(argc,argv,short_options,long_options,&option_index))!=-1)
+   {
+      switch(parametr){
+
+         /*Обработка транспортного протокола*/
+
+         case 0: 
+            error = transport_protocol( optarg, filter );
+            if(error == 0)
+            {
+               printf("Incorrect transport protocol(-h/--help)!!!\n");
+               return 0;
+            }
+            flag_transport = 1;
+            break;
+
+         /*Обработка ip адреса*/
+
+         case 1: 
+            error = ip_protocol( optarg, filter );
+            if(error == 0)
+            {
+               printf("IP incorrect!!!\n");
+               return 0;
+            }
+            availability_of_parameters++;
+            break;
+
+         /*Обработка порта*/
+
+         case 2: 
+            error = port( optarg, filter );
+            if(error == 0)
+            {
+               printf("Port incorrect!!!\n");
+               return 0;
+            }
+            availability_of_parameters++;
+            break;
+
+         /*Обработка режима фильтра*/
+
+         case 3: 
+            error = mode( optarg, filter );
+            if(error == 0)
+            {
+               printf("Incorrect value of mode(-h/--help)!!!\n");
+               return 0;
+            }
+            flag_mode = 1;
+            break;
+
+         /*Вывод статистики по всем фильтрам*/
+
+         case 4:
+            show_stat( argv, fd_proc );
+            return 0;
+
+         /*Help*/
+
+         case 'h': 
+            printf("\nSystem for blocking network packets.\n\nParameters:\n    --transport [value]    protocol of the transport layer."
+               " Available protocols udp/tcp.\n    --filter [value]    mode of operation of the filter(enable/disable)\n    --port [value]"
+               "    port\n    --ip [value]    ip address\n     -i    input packet\n     -o    output packet\n\n");       
+            return 0;
+
+         /*Входящий пакет*/
+
+         case 'i':
+            filter->in_or_out_packet = INPUT_PACKET;
+            flag_in_out_packet = 1;
+            break;
+
+         /*Исходящий пакет*/
+
+         case 'o':
+            filter->in_or_out_packet = OUTPUT_PACKET;
+            flag_in_out_packet = 1;
+            break;
+
+         /*Непредусмотренные значения*/  
+
+         default: 
+            printf("Found unknown option(-h/--help)\n");
+            return 0;    
+      }
+   }
+
+   /*Проверка недостающих параметров*/
+
+   if(flag_transport == 0)
+      printf("Select transport protocol(-h/--help)\n");
+   else 
+      if( availability_of_parameters == 0 )
+         printf("No ip address and no port in rule of filter\n");
+      else
+         if(flag_in_out_packet == 0)
+            printf("Select input or output packet(-h/--help)\n");
+         else
+            if(flag_mode == 0)
+               printf("Select mode of filter(-h/--help)\n");
+            else
+               return 1;
+   return 0;
+}
+
+/*Функция определения типа транспортного протокола и занесения его в фильтр*/
 
 int transport_protocol(char *value_of_transport_parametr,struct netfilter *filter)
 {
@@ -14,8 +143,7 @@ int transport_protocol(char *value_of_transport_parametr,struct netfilter *filte
    return 1;
 }
 
-/*поиск ip адреса, если ip не был задан, то счетчик availability_of_parameters уменьшается на единицу,
-если счетчик равен нулю, значит, не был задан ни ip ни port*/
+/*Функция преобразование ip адреса в сетевое представление и занесения его в фильтр*/
 
 int ip_protocol(char *value_of_ip_parametr,struct netfilter *filter)
 {
@@ -25,8 +153,7 @@ int ip_protocol(char *value_of_ip_parametr,struct netfilter *filter)
    return 1;
 }
 
-/*поиск порта, если port не был задан, то счетчик availability_of_parameters уменьшается на единицу,
-если счетчик равен нулю, значит, не был задан ни ip ни port*/
+/*Функция преобразования порта в int и занесения его в фильтр*/
 
 int port(char *value_of_port,struct netfilter *filter)
 {
@@ -37,7 +164,7 @@ int port(char *value_of_port,struct netfilter *filter)
    return 1;
 }
 
-/*поиск используемого мода(enable/disable)*/
+/*Режим работы фильтра(enable/disable)*/
 
 int mode(char *value_of_mode, struct netfilter *filter)
 {
@@ -52,7 +179,7 @@ int mode(char *value_of_mode, struct netfilter *filter)
    return 1;
 }
 
-/*функция отправки фильтра*/
+/*Функция отправки фильтра*/
 
 void send_rule_of_filter(struct netfilter *filter, int fd_dev)
 {
@@ -60,7 +187,7 @@ void send_rule_of_filter(struct netfilter *filter, int fd_dev)
       printf("Error IOCTL_SET_FILTER \n");
 }
 
-/*функция выдача статистики*/
+/*Функция выдача статистики*/
 
 void show_stat(char **argv,int fd_proc)
 {
@@ -101,28 +228,12 @@ void show_stat(char **argv,int fd_proc)
 
 int main(int argc, char *argv[]) 
 {
-   int fd_proc,fd_dev,error,parametr,option_index,flag_transport,flag_in_out_packet,flag_mode;
+   int fd_proc,fd_dev,error;
    struct netfilter filter;
-   const char* short_options = "hio";
-   const struct option long_options[] = {
-        {"help",no_argument,NULL,'h'},
-        {"transport",required_argument,NULL,0},
-        {"ip",required_argument,NULL,1},
-        {"port",required_argument,NULL,2},
-        {"filter",required_argument,NULL,3},
-        {"show",required_argument,NULL,4},
-        {NULL,0,NULL,0}
-    };
 
-   /*Если значение availability_of_parameters == 0, значит не был задан ни ip ни port*/
-
-   availability_of_parameters = 0;
-   flag_transport = 0;
-   flag_in_out_packet = 0;
-   flag_mode = 0;
    memset (&filter, 0, sizeof(struct netfilter));
 
-   /*открываем два файла, через один отправляем правило спомощью ioctl/dev, через другой получаем статистику с помощью ioctl/procfs*/
+   /*Открываем два файла, через один отправляем правило спомощью ioctl/dev, через другой получаем статистику с помощью ioctl/procfs*/
 
    if( ( fd_dev = open( DEV_PATH, O_RDWR ) ) < 0 ) 
    {
@@ -134,108 +245,10 @@ int main(int argc, char *argv[])
       printf( "Open proc error\n" );
       return 0;
    }
-   
-   while ((parametr = getopt_long(argc,argv,short_options,long_options,&option_index))!=-1)
-   {
-      switch(parametr){
 
-
-
-         case 0: 
-            error = transport_protocol( optarg, &filter );
-            if(error == 0)
-            {
-               printf("Incorrect transport protocol(-h/--help)!!!\n");
-               return 0;
-            }
-            flag_transport = 1;
-            break;
-
-
-
-         case 1: 
-            error = ip_protocol( optarg, &filter );
-            if(error == 0)
-            {
-               printf("IP incorrect!!!\n");
-               return 0;
-            }
-            availability_of_parameters++;
-            break;
-
-
-
-         case 2: 
-            error = port( optarg, &filter );
-            if(error == 0)
-            {
-               printf("Port incorrect!!!\n");
-               return 0;
-            }
-            availability_of_parameters++;
-            break;
-
-
-
-         case 3: 
-            error = mode( optarg, &filter );
-            if(error == 0)
-            {
-               printf("Incorrect value of mode(-h/--help)!!!\n");
-               return 0;
-            }
-            flag_mode = 1;
-            break;
-
-         /*команда show, которая выводит статистику по всем фильтрам*/
-
-         case 4:
-            show_stat( argv, fd_proc );
-            break;
-
-
-
-         case 'h': 
-            printf("\nSystem for blocking network packets.\n\nParameters:\n    --transport [value]    protocol of the transport layer. Available protocols udp/tcp.\n    --filter [value]    mode of operation of the filter(enable/disable)\n    --port [value]    port\n    --ip [value]    ip address\n    -i    input packet\n    -o    output packet\n\n");       
-            return 0;
-            break;
-
-
-
-         case 'i':
-            filter.in_or_out_packet = INPUT_PACKET;
-            flag_in_out_packet = 1;
-            break;
-
-
-
-         case 'o':
-            filter.in_or_out_packet = OUTPUT_PACKET;
-            flag_in_out_packet = 1;
-            break;
-
-
-
-         default: 
-            printf("Found unknown option(-h/--help)\n");
-            return 0;
-            
-      }
-   }
-   printf(" | Transport: %d | IP = %s port = %d mode = %d i/o = %d\n", filter.transport, (char *)inet_ntoa(filter.ip),filter.port,filter.mode,filter.in_or_out_packet);
-   if(flag_transport == 0)
-      printf("Select transport protocol(-h/--help)\n");
-   else 
-      if( availability_of_parameters == 0 )
-         printf("No ip address and no port in rule of filter\n");
-      else
-         if(flag_in_out_packet == 0)
-            printf("Select input or output packet(-h/--help)\n");
-         else
-            if(flag_mode == 0)
-               printf("Select mode of filter(-h/--help)\n");
-            else
-               send_rule_of_filter( &filter,fd_dev );
+   error = parser(argc,argv,&filter,fd_proc);
+   if(error != 0)
+      send_rule_of_filter( &filter,fd_dev ); 
    close( fd_dev );
    close( fd_proc );
    return EXIT_SUCCESS;
