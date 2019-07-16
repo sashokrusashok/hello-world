@@ -230,7 +230,6 @@ int main(int argc, char *argv[])
 {
    int fd_proc,error;
    struct netfilter filter;
-   char *p;
 
    memset (&filter, 0, sizeof(struct netfilter));
 
