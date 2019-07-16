@@ -28,93 +28,100 @@ uint32_t netfilter_hook(void *priv,struct sk_buff *skb,const struct nf_hook_stat
     {
       if(all_filters[i].free_cell_of_filter == 1)
       {
-        /*Если фильтруется входной трафик, то ip/port источника пакета должен совпадать с ip/port фильтра, 
-        а ip назначения совпадать с ip сетевого интерфейса на который пришел пакет*/
 
-        if(all_filters[i].in_or_out_packet == INPUT_PACKET)
+        /*Если транспортный протокол соответствующего правила соответствует пришедшему пакету*/
+
+        if(all_filters[i].transport == ip->protocol)
         {
-            /*Если в фильтре отсутствует порт, то фильтруем только по ip*/
 
-            if(all_filters[i].port == 0)
-            {
-              /*Если ip адрес источника совпадает*/ 
+          /*Если фильтруется входной трафик, то ip/port источника пакета должен совпадать с ip/port фильтра, 
+          а ip назначения совпадать с ip сетевого интерфейса на который пришел пакет*/
 
-              if(all_filters[i].ip.s_addr == ip->saddr)  
-              {
-                printk(KERN_INFO "input traffic is dropped by ip\n");
-                all_filters[i].number_drop_packet++;
-                return NF_DROP;
-              }
-            }
-            else
-            {
-              /*Если в фильтре отсутствует ip, то фильтруем только по порту*/
-
-              if(all_filters[i].ip.s_addr == 0)
-              {
-                if(all_filters[i].port == ntohs(udp_or_tcp->source))
-                {
-                  printk(KERN_INFO "input traffic is dropped by port\n");
-                  all_filters[i].number_drop_packet++;
-                  return NF_DROP;
-                }
-              }
-              else
-              {
-                /*Если в фильтре присутствует ip и port, то фильтруем по их связке*/
-
-                if(all_filters[i].port == ntohs(udp_or_tcp->source) && all_filters[i].ip.s_addr == ip->saddr)
-                {
-                  printk(KERN_INFO "input traffic is dropped by port and ip\n");
-                  all_filters[i].number_drop_packet++;
-                  return NF_DROP;
-                }
-              }
-            }
-        }
-        else
-        {
-          /*Если фильтруется выходной трафик, то ip/port назначения пакета должен совпадать с ip/port фильтра, 
-          а ip источника должно совпадать с ip сетевого интерфейса с которого отправляется пакет*/
-
-          if(all_filters[i].in_or_out_packet == OUTPUT_PACKET)
-          { 
-            /*Если в фильтре отсутствует порт, то фильтруем только по ip*/
+          if(all_filters[i].in_or_out_packet == INPUT_PACKET)
+          {
+              /*Если в фильтре отсутствует порт, то фильтруем только по ip*/
 
               if(all_filters[i].port == 0)
               {
-                if(all_filters[i].ip.s_addr == ip->daddr)  
+                /*Если ip адрес источника совпадает*/ 
+
+                if(all_filters[i].ip.s_addr == ip->saddr)  
                 {
-                  printk(KERN_INFO "output traffic is dropped by ip\n");
+                  printk(KERN_INFO "input traffic is dropped by ip\n");
                   all_filters[i].number_drop_packet++;
                   return NF_DROP;
                 }
               }
               else
               {
-                if(all_filters[i].ip.s_addr == 0)
-                { 
-                  /*Если в фильтре отсутствует ip, то фильтруем только по порту*/
+                /*Если в фильтре отсутствует ip, то фильтруем только по порту*/
 
-                    if(all_filters[i].port == ntohs(udp_or_tcp->dest))
-                    {
-                      printk(KERN_INFO "output traffic is dropped by port\n");
-                      all_filters[i].number_drop_packet++;
-                      return NF_DROP;
-                    } 
+                if(all_filters[i].ip.s_addr == 0)
+                {
+                  if(all_filters[i].port == ntohs(udp_or_tcp->source))
+                  {
+                    printk(KERN_INFO "input traffic is dropped by port\n");
+                    all_filters[i].number_drop_packet++;
+                    return NF_DROP;
+                  }
                 }
                 else
                 {
                   /*Если в фильтре присутствует ip и port, то фильтруем по их связке*/
 
-                  if(all_filters[i].port == ntohs(udp_or_tcp->dest) && all_filters[i].ip.s_addr == ip->daddr)
+                  if(all_filters[i].port == ntohs(udp_or_tcp->source) && all_filters[i].ip.s_addr == ip->saddr)
                   {
-                    printk(KERN_INFO "output traffic is dropped by port and ip\n");
+                    printk(KERN_INFO "input traffic is dropped by port and ip\n");
                     all_filters[i].number_drop_packet++;
                     return NF_DROP;
                   }
                 }
               }
+          }
+          else
+          {
+            /*Если фильтруется выходной трафик, то ip/port назначения пакета должен совпадать с ip/port фильтра, 
+            а ip источника должно совпадать с ip сетевого интерфейса с которого отправляется пакет*/
+
+            if(all_filters[i].in_or_out_packet == OUTPUT_PACKET)
+            { 
+              /*Если в фильтре отсутствует порт, то фильтруем только по ip*/
+
+                if(all_filters[i].port == 0)
+                {
+                  if(all_filters[i].ip.s_addr == ip->daddr)  
+                  {
+                    printk(KERN_INFO "output traffic is dropped by ip\n");
+                    all_filters[i].number_drop_packet++;
+                    return NF_DROP;
+                  }
+                }
+                else
+                {
+                  if(all_filters[i].ip.s_addr == 0)
+                  { 
+                    /*Если в фильтре отсутствует ip, то фильтруем только по порту*/
+
+                      if(all_filters[i].port == ntohs(udp_or_tcp->dest))
+                      {
+                        printk(KERN_INFO "output traffic is dropped by port\n");
+                        all_filters[i].number_drop_packet++;
+                        return NF_DROP;
+                      } 
+                  }
+                  else
+                  {
+                    /*Если в фильтре присутствует ip и port, то фильтруем по их связке*/
+
+                    if(all_filters[i].port == ntohs(udp_or_tcp->dest) && all_filters[i].ip.s_addr == ip->daddr)
+                    {
+                      printk(KERN_INFO "output traffic is dropped by port and ip\n");
+                      all_filters[i].number_drop_packet++;
+                      return NF_DROP;
+                    }
+                  }
+                }
+            }
           }
         }
       }
