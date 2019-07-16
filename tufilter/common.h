@@ -20,6 +20,6 @@
 #define FILTER_DISABLE 0
 #define INPUT_PACKET 0
 #define OUTPUT_PACKET 1
-#define IOC_MAGIC    'h'
+#define IOC_MAGIC    247
 #define IOCTL_SET_FILTER _IOW( IOC_MAGIC, 1,  struct netfilter )
 #define IOCTL_GET_STAT_FILTER _IOR( IOC_MAGIC, 2, struct all_netfilters )

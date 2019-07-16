@@ -4,6 +4,9 @@ CFLAGS = -pedantic -Wall -g
 all:	
 		$(CC) client_tufilter.c $(CFLAGS) -o tufilter
 
+all_cross:
+		/home/we/projects/rt/rg35_rtl8197_3-4-11c/rtl819x/toolchain/msdk-4.4.7-mips-EL-3.10-u0.9.33-m32t-140827/bin/mips-linux-gcc client_tufilter.c -static -o tufilter
+
 test:
 		sudo ./tufilter --transport tcp --ip 172.25.23.4 --port 4357 -i --filter enable
 		sudo ./tufilter --transport udp --ip 192.168.23.4 --port 7777 -o --filter enable

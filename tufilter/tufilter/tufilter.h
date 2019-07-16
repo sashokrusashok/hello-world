@@ -27,13 +27,16 @@
 #define PROC_FILE_NAME "ioctl_proc"
 
 struct all_netfilters all_filters[NUMBER_FILTER_RULE];
-struct netfilter *filter;
+struct netfilter filter;
 struct proc_dir_entry *proc_file;
 struct nf_hook_ops hook_local_in, hook_local_out;
 int major_num;
+char *msg_ptr = "Hello\n";
+static int len_ker_buf = 7;
 
-uint32_t netfilter_hook(void *priv,struct sk_buff *skb,const struct nf_hook_state *state);
+unsigned int netfilter_hook(unsigned int hooknum,struct sk_buff *skb,const struct net_device *in,const struct net_device *out,int (*okfn)(struct sk_buff *));
 int exist_filter(struct netfilter *filter);
 int enable_rule_of_filter(struct netfilter *filter);
 int disable_rule_of_filter(struct netfilter *filter);
+static ssize_t procfile_read(struct file*, char*, size_t, loff_t*);
 long filter_ioctl(  struct file *file,unsigned int ioctl_num,unsigned long ioctl_param);

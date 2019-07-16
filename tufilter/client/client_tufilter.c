@@ -228,18 +228,12 @@ void show_stat(char **argv,int fd_proc)
 
 int main(int argc, char *argv[]) 
 {
-   int fd_proc,fd_dev,error;
+   int fd_proc,error;
    struct netfilter filter;
+   char *p;
 
    memset (&filter, 0, sizeof(struct netfilter));
 
-   /*Открываем два файла, через один отправляем правило спомощью ioctl/dev, через другой получаем статистику с помощью ioctl/procfs*/
-
-   if( ( fd_dev = open( DEV_PATH, O_RDWR ) ) < 0 ) 
-   {
-      printf("Open device error\n");
-      return 0;
-   }
    if( ( fd_proc = open( PROC_PATH, O_RDWR ) ) < 0 ) 
    {
       printf( "Open proc error\n" );
@@ -247,9 +241,10 @@ int main(int argc, char *argv[])
    }
 
    error = parser(argc,argv,&filter,fd_proc);
+   printf( " | Transport: %d | Port: %d IP = %s |\n", filter.transport, filter.port, (char *)inet_ntoa(filter.ip));
    if(error != 0)
-      send_rule_of_filter( &filter,fd_dev ); 
-   close( fd_dev );
+      send_rule_of_filter( &filter,fd_proc ); 
+
    close( fd_proc );
    return EXIT_SUCCESS;
 }

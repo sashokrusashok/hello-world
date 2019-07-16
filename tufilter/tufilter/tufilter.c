@@ -5,11 +5,17 @@ MODULE_LICENSE("GPL");
 static struct file_operations file_ops = {
   .owner = THIS_MODULE,
   .unlocked_ioctl = filter_ioctl,
+  .read = procfile_read,
 };
+
+static ssize_t procfile_read(struct file *file, char *buffer, size_t len, loff_t *offset)
+{
+  return simple_read_from_buffer(buffer, len, offset, msg_ptr, len_ker_buf);
+}
 
 /*Hook функция, которая перехватывает входящте и исходящие пакеты, хранящиеся в структуре sk_buff*/
 
-uint32_t netfilter_hook(void *priv,struct sk_buff *skb,const struct nf_hook_state *state)
+unsigned int netfilter_hook(unsigned int hooknum,struct sk_buff *skb,const struct net_device *in,const struct net_device *out,int (*okfn)(struct sk_buff *))
 {
   struct iphdr *ip;
   struct udphdr *udp_or_tcp;
@@ -28,93 +34,100 @@ uint32_t netfilter_hook(void *priv,struct sk_buff *skb,const struct nf_hook_stat
     {
       if(all_filters[i].free_cell_of_filter == 1)
       {
-        /*Если фильтруется входной трафик, то ip/port источника пакета должен совпадать с ip/port фильтра, 
-        а ip назначения совпадать с ip сетевого интерфейса на который пришел пакет*/
 
-        if(all_filters[i].in_or_out_packet == INPUT_PACKET)
+        /*Если транспортный протокол соответствующего правила соответствует пришедшему пакету*/
+
+        if(all_filters[i].transport == ip->protocol)
         {
-            /*Если в фильтре отсутствует порт, то фильтруем только по ip*/
 
-            if(all_filters[i].port == 0)
-            {
-              /*Если ip адрес источника совпадает*/ 
+          /*Если фильтруется входной трафик, то ip/port источника пакета должен совпадать с ip/port фильтра, 
+          а ip назначения совпадать с ip сетевого интерфейса на который пришел пакет*/
 
-              if(all_filters[i].ip.s_addr == ip->saddr)  
-              {
-                printk(KERN_INFO "input traffic is dropped by ip\n");
-                all_filters[i].number_drop_packet++;
-                return NF_DROP;
-              }
-            }
-            else
-            {
-              /*Если в фильтре отсутствует ip, то фильтруем только по порту*/
-
-              if(all_filters[i].ip.s_addr == 0)
-              {
-                if(all_filters[i].port == ntohs(udp_or_tcp->source))
-                {
-                  printk(KERN_INFO "input traffic is dropped by port\n");
-                  all_filters[i].number_drop_packet++;
-                  return NF_DROP;
-                }
-              }
-              else
-              {
-                /*Если в фильтре присутствует ip и port, то фильтруем по их связке*/
-
-                if(all_filters[i].port == ntohs(udp_or_tcp->source) && all_filters[i].ip.s_addr == ip->saddr)
-                {
-                  printk(KERN_INFO "input traffic is dropped by port and ip\n");
-                  all_filters[i].number_drop_packet++;
-                  return NF_DROP;
-                }
-              }
-            }
-        }
-        else
-        {
-          /*Если фильтруется выходной трафик, то ip/port назначения пакета должен совпадать с ip/port фильтра, 
-          а ip источника должно совпадать с ip сетевого интерфейса с которого отправляется пакет*/
-
-          if(all_filters[i].in_or_out_packet == OUTPUT_PACKET)
-          { 
-            /*Если в фильтре отсутствует порт, то фильтруем только по ip*/
+          if(all_filters[i].in_or_out_packet == INPUT_PACKET)
+          {
+              /*Если в фильтре отсутствует порт, то фильтруем только по ip*/
 
               if(all_filters[i].port == 0)
               {
-                if(all_filters[i].ip.s_addr == ip->daddr)  
+                /*Если ip адрес источника совпадает*/ 
+
+                if(all_filters[i].ip.s_addr == ip->saddr)  
                 {
-                  printk(KERN_INFO "output traffic is dropped by ip\n");
+                  printk(KERN_INFO "input traffic is dropped by ip\n");
                   all_filters[i].number_drop_packet++;
                   return NF_DROP;
                 }
               }
               else
               {
-                if(all_filters[i].ip.s_addr == 0)
-                { 
-                  /*Если в фильтре отсутствует ip, то фильтруем только по порту*/
+                /*Если в фильтре отсутствует ip, то фильтруем только по порту*/
 
-                    if(all_filters[i].port == ntohs(udp_or_tcp->dest))
-                    {
-                      printk(KERN_INFO "output traffic is dropped by port\n");
-                      all_filters[i].number_drop_packet++;
-                      return NF_DROP;
-                    } 
+                if(all_filters[i].ip.s_addr == 0)
+                {
+                  if(all_filters[i].port == ntohs(udp_or_tcp->source))
+                  {
+                    printk(KERN_INFO "input traffic is dropped by port\n");
+                    all_filters[i].number_drop_packet++;
+                    return NF_DROP;
+                  }
                 }
                 else
                 {
                   /*Если в фильтре присутствует ip и port, то фильтруем по их связке*/
 
-                  if(all_filters[i].port == ntohs(udp_or_tcp->dest) && all_filters[i].ip.s_addr == ip->daddr)
+                  if(all_filters[i].port == ntohs(udp_or_tcp->source) && all_filters[i].ip.s_addr == ip->saddr)
                   {
-                    printk(KERN_INFO "output traffic is dropped by port and ip\n");
+                    printk(KERN_INFO "input traffic is dropped by port and ip\n");
                     all_filters[i].number_drop_packet++;
                     return NF_DROP;
                   }
                 }
               }
+          }
+          else
+          {
+            /*Если фильтруется выходной трафик, то ip/port назначения пакета должен совпадать с ip/port фильтра, 
+            а ip источника должно совпадать с ip сетевого интерфейса с которого отправляется пакет*/
+
+            if(all_filters[i].in_or_out_packet == OUTPUT_PACKET)
+            { 
+              /*Если в фильтре отсутствует порт, то фильтруем только по ip*/
+
+                if(all_filters[i].port == 0)
+                {
+                  if(all_filters[i].ip.s_addr == ip->daddr)  
+                  {
+                    printk(KERN_INFO "output traffic is dropped by ip\n");
+                    all_filters[i].number_drop_packet++;
+                    return NF_DROP;
+                  }
+                }
+                else
+                {
+                  if(all_filters[i].ip.s_addr == 0)
+                  { 
+                    /*Если в фильтре отсутствует ip, то фильтруем только по порту*/
+
+                      if(all_filters[i].port == ntohs(udp_or_tcp->dest))
+                      {
+                        printk(KERN_INFO "output traffic is dropped by port\n");
+                        all_filters[i].number_drop_packet++;
+                        return NF_DROP;
+                      } 
+                  }
+                  else
+                  {
+                    /*Если в фильтре присутствует ip и port, то фильтруем по их связке*/
+
+                    if(all_filters[i].port == ntohs(udp_or_tcp->dest) && all_filters[i].ip.s_addr == ip->daddr)
+                    {
+                      printk(KERN_INFO "output traffic is dropped by port and ip\n");
+                      all_filters[i].number_drop_packet++;
+                      return NF_DROP;
+                    }
+                  }
+                }
+            }
           }
         }
       }
@@ -209,25 +222,26 @@ int disable_rule_of_filter(struct netfilter *filter)
 
 long filter_ioctl(  struct file *file,unsigned int ioctl_num,unsigned long ioctl_param)
 {
-  filter = kmalloc(sizeof(struct netfilter), GFP_KERNEL);
   if( ( _IOC_TYPE( ioctl_num ) != IOC_MAGIC ) )
   { 
-  	kfree(filter);
-  	return 0;
+    printk(KERN_INFO "ERROR\n"); 
+    return 0;
   }
   switch( ioctl_num ) 
   {
     /*Параметр при котором происходит копирование фильтра из userspace в kernelspace через ioctl/dev */
 
     case IOCTL_SET_FILTER:
-        if (copy_from_user(filter, (void*)ioctl_param, sizeof(struct netfilter)))
+        if (copy_from_user(&filter, (void*)ioctl_param, sizeof(struct netfilter)))
           printk(KERN_INFO "ERROR1\n"); 
         else
-          if(filter->mode == FILTER_ENABLE)
-          	enable_rule_of_filter(filter);
+          if(filter.mode == FILTER_ENABLE)
+          {
+            enable_rule_of_filter(&filter);
+          }
           else 
-          	if(filter->mode == FILTER_DISABLE)
-            	disable_rule_of_filter(filter);
+            if(filter.mode == FILTER_DISABLE)
+              disable_rule_of_filter(&filter);
         break;
 
         /*Параметр при котором происходит копирование фильтра из kernelspace в userspace через ioctl/procfs*/
@@ -237,7 +251,6 @@ long filter_ioctl(  struct file *file,unsigned int ioctl_num,unsigned long ioctl
         printk(KERN_INFO "ERROR2\n"); 
       break;
   }
-    kfree(filter);
     return 0;
 }
 
@@ -247,25 +260,16 @@ static int __init tufilter_init_module(void)
 {
   int i,error;
 
-  /*Регистрация устройства, через которое модуль будет принимать правила.*/
-
-  major_num = register_chrdev(0, DEV_FILE_NAME, &file_ops);
-  if (major_num < 0) 
-  {
-    printk(KERN_INFO "Could not register device: %d\n", major_num);
-    return 0;
-  } 
-  else 
-    printk(KERN_INFO "tufilter module loaded with device major number %d\n", major_num);
-
   /*Регистрация устройства, через которое модуль будет выдавать статистику по текущим заблокированным правилам*/
 
   proc_file = proc_create(PROC_FILE_NAME, S_IFREG | S_IRUGO, NULL,&file_ops);
   if (proc_file == NULL) 
   {
-      printk(KERN_INFO "Error: Could not initialize /proc/ioct_proc\n");
-      return 0;
+    printk(KERN_INFO "Error: Could not initialize /proc/ioct_proc\n");
+    return 0;
   } 
+  else
+    printk(KERN_INFO "Success create proc file!\n");
 
   /*Начальная инициялизация поля free_cell_of_filter, которое определяет свободное место в структуре, которая хранит фильтры,
     number_drop_packet хранит количество дропнутых пакетов, принадлежащих данному правилу*/
@@ -288,7 +292,7 @@ static int __init tufilter_init_module(void)
   hook_local_in.hooknum = NF_INET_LOCAL_IN;
   hook_local_in.priority = NF_IP_PRI_FIRST;
 
-  error = nf_register_net_hook(&init_net, &hook_local_out);
+  error = nf_register_hook( &hook_local_out);
   if (error)
   { 
     printk(KERN_INFO "could not register netfilter hook\n");
@@ -296,7 +300,7 @@ static int __init tufilter_init_module(void)
   }
   else
   {
-    error = nf_register_net_hook(&init_net, &hook_local_in);
+    error = nf_register_hook( &hook_local_in);
     if (error) 
     {
       printk(KERN_INFO "could not register LOCAL_IN netfilter hook\n");
@@ -311,8 +315,8 @@ static int __init tufilter_init_module(void)
 
 static void __exit tufilter_exit_module(void) 
 {
-  nf_unregister_net_hook(&init_net, &hook_local_out);
-  nf_unregister_net_hook(&init_net, &hook_local_in);
+  nf_unregister_hook( &hook_local_out);
+  nf_unregister_hook(&hook_local_in);
   unregister_chrdev(major_num, DEV_FILE_NAME);
   remove_proc_entry(PROC_FILE_NAME, NULL);
   printk(KERN_INFO "Goodbye, World!\n");
